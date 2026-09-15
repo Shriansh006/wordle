@@ -79,30 +79,42 @@ function buildBoard() {
   }
 }
 
+const BACKSPACE_ICON =
+  '<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path d="M22 3H7c-.69 0-1.23.35-1.59.88L0 12l5.41 8.11c.36.53.9.89 1.59.89h15c1.1 0 2-.9 2-2V5c0-1.1-.9-2-2-2zm-3 12.59L17.59 17 14 13.41 10.41 17 9 15.59 12.59 12 9 8.41 10.41 7 14 10.59 17.59 7 19 8.41 15.41 12 19 15.59z"/></svg>';
+
 const KEY_ROWS = [
   ["q", "w", "e", "r", "t", "y", "u", "i", "o", "p"],
   ["a", "s", "d", "f", "g", "h", "j", "k", "l"],
-  ["enter", "z", "x", "c", "v", "b", "n", "m", "backspace"],
+  ["spacer", "z", "x", "c", "v", "b", "n", "m", "backspace"],
+  ["enter"],
 ];
 
 function buildKeyboard() {
   keyboard.innerHTML = "";
   keyEls = {};
-  for (const keys of KEY_ROWS) {
+  KEY_ROWS.forEach((keys, index) => {
     const row = document.createElement("div");
     row.className = "key-row";
+    if (index === KEY_ROWS.length - 1) row.classList.add("end");
     for (const k of keys) {
+      if (k === "spacer") {
+        const spacer = document.createElement("span");
+        spacer.className = "key spacer";
+        spacer.setAttribute("aria-hidden", "true");
+        row.appendChild(spacer);
+        continue;
+      }
       const btn = document.createElement("button");
       btn.type = "button";
       btn.className = "key";
       btn.dataset.key = k;
       if (k === "enter") {
-        btn.classList.add("wide");
+        btn.classList.add("enter");
         btn.textContent = "Enter";
       } else if (k === "backspace") {
         btn.classList.add("wide");
         btn.setAttribute("aria-label", "Backspace");
-        btn.textContent = "Del";
+        btn.innerHTML = BACKSPACE_ICON;
       } else {
         btn.textContent = k.toUpperCase();
       }
@@ -111,7 +123,7 @@ function buildKeyboard() {
       keyEls[k] = btn;
     }
     keyboard.appendChild(row);
-  }
+  });
 }
 
 function judge(guess: string, solution: string): Mark[] {

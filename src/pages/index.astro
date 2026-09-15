@@ -81,7 +81,8 @@ const title = "Wordle";
 				--correct: #538d4e;
 				--present: #b59f3b;
 				--absent: #3a3a3c;
-				--key: #818384;
+				--key-bg: #7c7e7f;
+				--key-dark: #5a5c5d;
 				font-family: "Clear Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
 			}
 
@@ -271,38 +272,66 @@ const title = "Wordle";
 			}
 
 			.keyboard {
+				--key: min(8.3vw, 42px);
+				--gap: min(1.1vw, 7px);
 				width: 100%;
 				max-width: 500px;
-				padding: 8px 6px 14px;
+				padding: 8px 4px 12px;
 				display: flex;
 				flex-direction: column;
-				gap: 7px;
+				gap: var(--gap);
 			}
 
 			.key-row {
 				display: flex;
 				justify-content: center;
-				gap: 6px;
+				gap: var(--gap);
+				min-height: calc(var(--key) * 1.35);
+			}
+
+			.key-row.end {
+				justify-content: flex-end;
 			}
 
 			.key {
-				flex: 1;
-				min-width: 0;
-				height: 56px;
+				flex: 0 0 auto;
+				width: var(--key);
+				height: calc(var(--key) * 1.35);
 				border: 0;
-				border-radius: 4px;
-				background: var(--key);
+				border-radius: calc(var(--key) * 0.18);
+				background: var(--key-bg);
 				color: var(--text);
-				font-size: 1.1rem;
-				font-weight: 700;
+				font-size: calc(var(--key) * 0.44);
+				font-weight: 600;
 				text-transform: uppercase;
 				cursor: pointer;
 				touch-action: manipulation;
+				display: grid;
+				place-items: center;
+				padding: 0;
+			}
+
+			.key svg {
+				fill: currentColor;
+				width: calc(var(--key) * 0.5);
+				height: calc(var(--key) * 0.5);
 			}
 
 			.key.wide {
-				flex: 1.5;
-				font-size: 0.8rem;
+				width: calc(var(--key) * 1.5);
+				background: var(--key-dark);
+			}
+
+			.key.enter {
+				width: calc(var(--key) * 3 + var(--gap) * 2);
+				background: var(--key-dark);
+				font-size: calc(var(--key) * 0.36);
+				text-transform: none;
+			}
+
+			.key.spacer {
+				visibility: hidden;
+				width: calc(var(--key) * 1.5);
 			}
 
 			.key[data-state="correct"] {
@@ -453,9 +482,6 @@ const title = "Wordle";
 					width: 52px;
 					height: 52px;
 					font-size: 1.6rem;
-				}
-				.key {
-					height: 48px;
 				}
 			}
 		</style>
