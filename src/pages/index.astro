@@ -1,0 +1,455 @@
+---
+const title = "Wordle";
+---
+
+<!doctype html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+		<link rel="icon" href="/favicon.ico" />
+		<meta name="viewport" content="width=device-width, initial-scale=1" />
+		<meta name="generator" content={Astro.generator} />
+		<meta name="description" content="A Wordle clone built with Astro." />
+		<title>{title}</title>
+	</head>
+	<body>
+		<header class="topbar">
+			<button id="open-stats" class="icon-btn" aria-label="Statistics" title="Statistics">
+				<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+					<rect x="4" y="12" width="3.2" height="8" rx="1" />
+					<rect x="10.4" y="7" width="3.2" height="13" rx="1" />
+					<rect x="16.8" y="3" width="3.2" height="17" rx="1" />
+				</svg>
+			</button>
+			<h1 class="brand">WORDLE</h1>
+			<button id="new-game" class="icon-btn" aria-label="New game" title="New game">
+				<svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true">
+					<path
+						d="M12 5V2L7 6l5 4V7a5 5 0 1 1-5 5H5a7 7 0 1 0 7-7Z"
+					/>
+				</svg>
+			</button>
+		</header>
+
+		<main class="board-wrap">
+			<div id="board" class="board" role="grid" aria-label="Game board"></div>
+			<div id="toast" class="toast" role="status" aria-live="polite"></div>
+		</main>
+
+		<div id="keyboard" class="keyboard" aria-label="Keyboard"></div>
+
+		<div id="stats-modal" class="modal hidden" aria-hidden="true" role="dialog" aria-label="Statistics">
+			<div class="modal-card">
+				<button id="close-stats" class="modal-close" aria-label="Close">&times;</button>
+				<h2 class="modal-title">Statistics</h2>
+				<div class="stats-grid">
+					<div class="stat">
+						<span id="stat-played" class="stat-value">0</span>
+						<span class="stat-label">Played</span>
+					</div>
+					<div class="stat">
+						<span id="stat-rate" class="stat-value">0%</span>
+						<span class="stat-label">Win %</span>
+					</div>
+					<div class="stat">
+						<span id="stat-streak" class="stat-value">0</span>
+						<span class="stat-label">Current Streak</span>
+					</div>
+					<div class="stat">
+						<span id="stat-max" class="stat-value">0</span>
+						<span class="stat-label">Max Streak</span>
+					</div>
+				</div>
+				<h3 class="dist-title">Guess Distribution</h3>
+				<div id="distribution" class="distribution"></div>
+				<div class="modal-actions">
+					<button id="share" class="btn ghost">Share</button>
+					<button id="play-again" class="btn">Play Again</button>
+				</div>
+			</div>
+		</div>
+
+		<style is:global>
+			:root {
+				--bg: #121213;
+				--panel: #1a1a1b;
+				--border: #3a3a3c;
+				--border-active: #565758;
+				--text: #f8f8f8;
+				--muted: #818384;
+				--correct: #538d4e;
+				--present: #b59f3b;
+				--absent: #3a3a3c;
+				--key: #818384;
+				font-family: "Clear Sans", "Helvetica Neue", Arial, system-ui, sans-serif;
+			}
+
+			* {
+				box-sizing: border-box;
+			}
+
+			html,
+			body {
+				margin: 0;
+				height: 100%;
+			}
+
+			body {
+				background: var(--bg);
+				color: var(--text);
+				display: flex;
+				flex-direction: column;
+				align-items: center;
+				justify-content: space-between;
+				min-height: 100dvh;
+				overflow: hidden;
+				-webkit-user-select: none;
+				user-select: none;
+			}
+
+			.topbar {
+				width: 100%;
+				max-width: 500px;
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				padding: 10px 12px;
+				border-bottom: 1px solid var(--border);
+			}
+
+			.brand {
+				font-size: 1.6rem;
+				font-weight: 800;
+				letter-spacing: 0.12em;
+				margin: 0;
+			}
+
+			.icon-btn {
+				background: none;
+				border: 0;
+				color: var(--text);
+				cursor: pointer;
+				padding: 6px;
+				border-radius: 6px;
+				display: grid;
+				place-items: center;
+			}
+
+			.icon-btn:hover {
+				background: var(--panel);
+			}
+
+			.icon-btn svg {
+				fill: var(--text);
+			}
+
+			.board-wrap {
+				flex: 1;
+				display: grid;
+				place-items: center;
+				position: relative;
+				width: 100%;
+			}
+
+			.board {
+				display: grid;
+				grid-template-rows: repeat(6, 1fr);
+				gap: 6px;
+			}
+
+			.row {
+				display: grid;
+				grid-template-columns: repeat(5, 1fr);
+				gap: 6px;
+			}
+
+			.tile {
+				width: 62px;
+				height: 62px;
+				border: 2px solid var(--border);
+				display: grid;
+				place-items: center;
+				font-size: 2rem;
+				font-weight: 700;
+				text-transform: uppercase;
+				line-height: 1;
+			}
+
+			.tile.filled {
+				border-color: var(--border-active);
+			}
+
+			.tile[data-state="correct"] {
+				background: var(--correct);
+				border-color: var(--correct);
+			}
+
+			.tile[data-state="present"] {
+				background: var(--present);
+				border-color: var(--present);
+			}
+
+			.tile[data-state="absent"] {
+				background: var(--absent);
+				border-color: var(--absent);
+			}
+
+			.tile.reveal {
+				animation: flip 0.55s ease;
+			}
+
+			@keyframes flip {
+				0% {
+					transform: rotateX(0);
+				}
+				45% {
+					transform: rotateX(90deg);
+				}
+				55% {
+					transform: rotateX(90deg);
+				}
+				100% {
+					transform: rotateX(0);
+				}
+			}
+
+			.row.shake {
+				animation: shake 0.5s;
+			}
+
+			@keyframes shake {
+				10%,
+				90% {
+					transform: translateX(-2px);
+				}
+				20%,
+				80% {
+					transform: translateX(4px);
+				}
+				30%,
+				50%,
+				70% {
+					transform: translateX(-7px);
+				}
+				40%,
+				60% {
+					transform: translateX(7px);
+				}
+			}
+
+			.toast {
+				position: absolute;
+				top: 8px;
+				left: 50%;
+				transform: translate(-50%, -8px);
+				background: var(--text);
+				color: var(--bg);
+				padding: 10px 16px;
+				border-radius: 6px;
+				font-weight: 700;
+				opacity: 0;
+				pointer-events: none;
+				transition: opacity 0.2s ease, transform 0.2s ease;
+				z-index: 20;
+			}
+
+			.toast.show {
+				opacity: 1;
+				transform: translate(-50%, 0);
+			}
+
+			.keyboard {
+				width: 100%;
+				max-width: 500px;
+				padding: 8px 6px 14px;
+				display: flex;
+				flex-direction: column;
+				gap: 7px;
+			}
+
+			.key-row {
+				display: flex;
+				justify-content: center;
+				gap: 6px;
+			}
+
+			.key {
+				flex: 1;
+				min-width: 0;
+				height: 56px;
+				border: 0;
+				border-radius: 4px;
+				background: var(--key);
+				color: var(--text);
+				font-size: 1.1rem;
+				font-weight: 700;
+				text-transform: uppercase;
+				cursor: pointer;
+			}
+
+			.key.wide {
+				flex: 1.5;
+				font-size: 0.8rem;
+			}
+
+			.key[data-state="correct"] {
+				background: var(--correct);
+			}
+
+			.key[data-state="present"] {
+				background: var(--present);
+			}
+
+			.key[data-state="absent"] {
+				background: var(--absent);
+				color: #a1a1a1;
+			}
+
+			.key:active {
+				opacity: 0.8;
+			}
+
+			.modal {
+				position: fixed;
+				inset: 0;
+				background: rgba(0, 0, 0, 0.6);
+				display: grid;
+				place-items: center;
+				z-index: 30;
+				padding: 16px;
+			}
+
+			.modal.hidden {
+				display: none;
+			}
+
+			.modal-card {
+				background: var(--panel);
+				border: 1px solid var(--border);
+				border-radius: 10px;
+				padding: 24px;
+				width: 100%;
+				max-width: 360px;
+				position: relative;
+			}
+
+			.modal-close {
+				position: absolute;
+				top: 8px;
+				right: 12px;
+				background: none;
+				border: 0;
+				color: var(--muted);
+				font-size: 1.8rem;
+				line-height: 1;
+				cursor: pointer;
+			}
+
+			.modal-title {
+				margin: 0 0 18px;
+				font-size: 1rem;
+				letter-spacing: 0.08em;
+				text-transform: uppercase;
+				text-align: center;
+			}
+
+			.stats-grid {
+				display: grid;
+				grid-template-columns: repeat(4, 1fr);
+				gap: 8px;
+				text-align: center;
+			}
+
+			.stat-value {
+				display: block;
+				font-size: 1.8rem;
+				font-weight: 700;
+			}
+
+			.stat-label {
+				font-size: 0.7rem;
+				color: var(--muted);
+			}
+
+			.dist-title {
+				margin: 22px 0 10px;
+				font-size: 0.8rem;
+				letter-spacing: 0.06em;
+				text-transform: uppercase;
+				text-align: center;
+				color: var(--muted);
+			}
+
+			.distribution {
+				display: flex;
+				flex-direction: column;
+				gap: 5px;
+			}
+
+			.dist-row {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+
+			.dist-num {
+				width: 12px;
+				font-size: 0.85rem;
+			}
+
+			.dist-bar {
+				background: var(--absent);
+				color: var(--text);
+				font-size: 0.8rem;
+				font-weight: 700;
+				padding: 2px 6px;
+				border-radius: 3px;
+				min-width: 22px;
+				transition: width 0.3s ease;
+			}
+
+			.modal-actions {
+				display: flex;
+				gap: 10px;
+				margin-top: 22px;
+			}
+
+			.btn {
+				flex: 1;
+				background: var(--correct);
+				color: #fff;
+				border: 0;
+				border-radius: 6px;
+				padding: 12px;
+				font-weight: 700;
+				cursor: pointer;
+			}
+
+			.btn.ghost {
+				background: transparent;
+				border: 1px solid var(--border);
+			}
+
+			.btn:disabled {
+				opacity: 0.4;
+				cursor: not-allowed;
+			}
+
+			@media (max-width: 420px) {
+				.tile {
+					width: 52px;
+					height: 52px;
+					font-size: 1.6rem;
+				}
+				.key {
+					height: 48px;
+				}
+			}
+		</style>
+
+		<script>
+			import "../scripts/game";
+		</script>
+	</body>
+</html>
